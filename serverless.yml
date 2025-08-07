@@ -1,0 +1,70 @@
+service: strapi-content-automation
+
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+custom:
+  serverless-offline:
+    httpPort: 4000
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-central-1
+  environment:
+    STRAPI_URL: ${env:STRAPI_URL}
+    STRAPI_API_KEY: ${env:STRAPI_API_KEY}
+    SQS_QUEUE_URL: ${env:SQS_QUEUE_URL}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    SQS_QUEUE_ARN: ${env:SQS_QUEUE_ARN}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource: ${self:provider.environment.SQS_QUEUE_ARN}
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+          Resource: "*"
+
+functions:
+  initiateSync:
+    handler: dist/handler.initiateSync
+    events:
+      - http:
+          path: /sync-instagram
+          method: post
+          cors: true
+  
+  processPost:
+    handler: dist/handler.processPost
+    events:
+      - sqs:
+          arn: ${self:provider.environment.SQS_QUEUE_ARN}
+          batchSize: 1
+    timeout: 60
+
+resources:
+  Resources:
+    ProcessedPostsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: processed-instagram-posts
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: instagramPostId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: instagramPostId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true

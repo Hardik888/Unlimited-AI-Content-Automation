@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist", // Ensure this is set
+    "rootDir": "./src" // Specify your source directory
+  },
+  "include": ["src/**/*"], // Include all files in src directory
+  "exclude": ["node_modules"]
+}
